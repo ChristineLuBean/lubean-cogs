@@ -1,0 +1,12 @@
+{
+    "author": ["Christine LuBean"],
+    "install_msg": "Thanks for installing the QOTD cog!",
+    "name": "QOTD",
+    "short": "A scheduled Question of the Day cog.",
+    "description": "Allows scheduling questions for specific dates in a set channel.",
+    "tags": ["utility", "qotd"],
+    "requirements": [],
+    "hidden": false,
+    "min_bot_version": "1.0.0",
+    "type": "COG"
+}
