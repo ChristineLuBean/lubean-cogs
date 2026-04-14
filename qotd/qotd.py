@@ -8,109 +8,82 @@ class QOTD(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        # Unique identifier for your cog's data
         self.config = Config.get_conf(self, identifier=8273641526)
-        
-        # Default settings for every server the bot is in
-        default_guild = {
-            "questions": [],
-            "channel_id": None,
-            "posted_today": None  # Tracks the last date a question was posted
-        }
+        default_guild = {"questions": [], "channel_id": None, "posted_today": None}
         self.config.register_guild(**default_guild)
-        
-        # Start the background task
         self.qotd_check.start()
 
     def cog_unload(self):
-        # Stop the task if the cog is unloaded
         self.qotd_check.cancel()
 
-    @commands.admin_or_permissions(manage_guild=True)
-    @commands.command()
-    async def qotdchannel(self, ctx, channel: discord.TextChannel):
-        """Set the channel where the Question of the Day will be posted."""
-        await self.config.guild(ctx.guild).channel_id.set(channel.id)
-        await ctx.send(f"✅ QOTD channel has been set to {channel.mention}")
+    @commands.group()
+    async def qotd(self, ctx):
+        """Manage Question of the Day settings and queue."""
+        # If someone just types !qotd without a subcommand, show help
+        if ctx.invoked_subcommand is None:
+            embed = discord.Embed(
+                title="❓ QOTD Bot Guide",
+                description="Use these commands to manage your daily questions.",
+                color=discord.Color.blue()
+            )
+            embed.add_field(name="Setup Channel", value="`!qotd channel #channel`", inline=False)
+            embed.add_field(name="Schedule Question", value="`!qotd add YYYY-MM-DD <question>`", inline=False)
+            embed.add_field(name="View Queue", value="`!qotd list`", inline=False)
+            embed.set_footer(text="Format dates as Year-Month-Day (e.g., 2026-04-13)")
+            await ctx.send(embed=embed)
 
-    @commands.command()
+    @qotd.command(name="channel")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def qotd_channel(self, ctx, channel: discord.TextChannel):
+        """Set the channel where QOTD will be posted."""
+        await self.config.guild(ctx.guild).channel_id.set(channel.id)
+        await ctx.send(f"✅ QOTD channel set to {channel.mention}")
+
+    @qotd.command(name="add")
     async def schedule_q(self, ctx, date: str, *, question: str):
-        """
-        Schedule a question. 
-        Format: [p]schedule_q YYYY-MM-DD Your question here
-        Example: [p]schedule_q 2026-04-14 What is your favorite dessert?
-        """
+        """Schedule a question: !qotd add YYYY-MM-DD <question>"""
         try:
-            # Validate the date format
             datetime.date.fromisoformat(date)
         except ValueError:
-            return await ctx.send("❌ Invalid date format. Please use **YYYY-MM-DD**.")
-
+            return await ctx.send("❌ Use **YYYY-MM-DD** format.")
         async with self.config.guild(ctx.guild).questions() as questions:
             questions.append({"text": question, "date": date})
-        
-        await ctx.send(f"📅 Scheduled for **{date}**: {question}")
+        await ctx.send(f"📅 Scheduled for **{date}**.")
 
-    @commands.command()
+    @qotd.command(name="list")
     async def qlist(self, ctx):
-        """View the queue of upcoming questions."""
+        """View upcoming questions."""
         questions = await self.config.guild(ctx.guild).questions()
         if not questions:
-            return await ctx.send("The queue is currently empty.")
-
-        msg = "**Upcoming Questions:**\n"
-        # Sort questions by date before displaying
+            return await ctx.send("The queue is empty.")
         sorted_qs = sorted(questions, key=lambda x: x['date'])
-        for i, q in enumerate(sorted_qs, 1):
-            msg += f"{i}. `{q['date']}`: {q['text']}\n"
-        
-        await ctx.send(msg)
+        msg = "\n".join([f"`{q['date']}`: {q['text']}" for q in sorted_qs])
+        await ctx.send(f"**Upcoming Questions:**\n{msg}")
 
     @tasks.loop(minutes=30)
     async def qotd_check(self):
-        """Check every 30 minutes if there is a question to post for today."""
+        # ... (keep the same loop logic as before) ...
         today = datetime.date.today().isoformat()
         all_guilds = await self.config.all_guilds()
-
         for guild_id, data in all_guilds.items():
-            # Basic checks: Is the guild/channel valid? Has it already posted today?
             guild = self.bot.get_guild(guild_id)
             if not guild or not data["channel_id"] or data["posted_today"] == today:
                 continue
-
             channel = guild.get_channel(data["channel_id"])
-            if not channel:
-                continue
-
+            if not channel: continue
             to_post = None
-            remaining_questions = []
-
-            # Find a question that matches today's date
+            remaining = []
             for q in data["questions"]:
                 if q["date"] == today and not to_post:
                     to_post = q["text"]
                 else:
-                    remaining_questions.append(q)
-
+                    remaining.append(q)
             if to_post:
-                # Create the visual embed
-                embed = discord.Embed(
-                    title="❓ Question of the Day",
-                    description=to_post,
-                    color=discord.Color.blue(),
-                    timestamp=datetime.datetime.now()
-                )
-                
-                try:
-                    await channel.send(embed=embed)
-                    # Update storage: remove the posted question and set the posted date
-                    await self.config.guild(guild).questions.set(remaining_questions)
-                    await self.config.guild(guild).posted_today.set(today)
-                except discord.Forbidden:
-                    # Log if the bot doesn't have permission to post in that channel
-                    continue
+                embed = discord.Embed(title="❓ Question of the Day", description=to_post, color=discord.Color.blue())
+                await channel.send(embed=embed)
+                await self.config.guild(guild).questions.set(remaining)
+                await self.config.guild(guild).posted_today.set(today)
 
     @qotd_check.before_loop
     async def before_qotd_check(self):
-        # Wait for the bot to fully connect before starting the loop
         await self.bot.wait_until_ready()
