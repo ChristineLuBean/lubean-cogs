@@ -55,7 +55,32 @@ class QOTD(commands.Cog):
         else:
             await ctx.send(f"❌ No questions were found for {date}.")
 
-    
+    @qotd.command(name="post")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def qotd_manual_post(self, ctx, *, question: str):
+        """Post a question to the QOTD channel immediately."""
+        channel_id = await self.config.guild(ctx.guild).channel_id()
+        
+        if not channel_id:
+            return await ctx.send("❌ The QOTD channel has not been set. Use `!qotd channel` first.")
+
+        channel = ctx.guild.get_channel(channel_id)
+        if not channel:
+            return await ctx.send("❌ I cannot find the designated channel. It may have been deleted.")
+
+        embed = discord.Embed(
+            title="❓ Question of the Day", 
+            description=question, 
+            color=discord.Color.blue()
+        )
+        
+        try:
+            await channel.send(embed=embed)
+            # Update the current_question so !qotd repost works with this manual post
+            await self.config.guild(ctx.guild).current_question.set(question)
+            await ctx.tick() # Feedback that the command succeeded
+        except discord.Forbidden:
+            await ctx.send("❌ I lack the permissions to speak in that channel. How... restrictive.")
 
     @qotd.command(name="repost")
     async def qotd_repost(self, ctx):
