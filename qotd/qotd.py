@@ -59,37 +59,45 @@ class QOTD(commands.Cog):
     @commands.admin_or_permissions(manage_guild=True)
     async def qotd_force(self, ctx):
         """Force post today's scheduled question immediately."""
-        today = datetime.date.today().isoformat()
-        channel_id = await self.config.guild(ctx.guild).channel_id()
-        
-        if not channel_id:
-            return await ctx.send("❌ No QOTD channel set. Use `!qotd channel` first.")
-        
-        channel = ctx.guild.get_channel(channel_id)
-        if not channel:
-            return await ctx.send("❌ I can't find the QOTD channel.")
+        try:
+            today = datetime.date.today().isoformat()
+            data = await self.config.guild(ctx.guild).all()
+            channel_id = data.get("channel_id")
+            
+            if not channel_id:
+                return await ctx.send("❌ No QOTD channel set. Use `!qotd channel` first.")
+            
+            channel = ctx.guild.get_channel(channel_id)
+            if not channel:
+                return await ctx.send("❌ I can't find the QOTD channel.")
 
-        async with self.config.guild(ctx.guild).questions() as questions:
-            to_post = None
-            index_to_remove = -1
+            # Find the question
+            questions = data.get("questions", [])
+            to_post_data = next((q for q in questions if q["date"] == today), None)
             
-            for i, q in enumerate(questions):
-                if q["date"] == today:
-                    to_post = q["text"]
-                    index_to_remove = i
-                    break
-            
-            if to_post:
-                embed = discord.Embed(title="❓ Question of the Day", description=to_post, color=discord.Color.blue())
+            if to_post_data:
+                to_post_text = to_post_data["text"]
+                embed = discord.Embed(
+                    title="❓ Question of the Day", 
+                    description=to_post_text, 
+                    color=discord.Color.blue()
+                )
                 await channel.send(embed=embed)
                 
-                await self.config.guild(ctx.guild).current_question.set(to_post)
-                await self.config.guild(ctx.guild).posted_today.set(today)
-                questions.pop(index_to_remove)
+                # Create a new list excluding the one we just posted
+                new_questions = [q for q in questions if q["date"] != today]
                 
-                await ctx.send("✅ Today's question has been forced and posted.")
+                # Update all records at once
+                await self.config.guild(ctx.guild).current_question.set(to_post_text)
+                await self.config.guild(ctx.guild).posted_today.set(today)
+                await self.config.guild(ctx.guild).questions.set(new_questions)
+                
+                await ctx.send(f"✅ Forced and posted for {today}.")
             else:
-                await ctx.send(f"❌ No question is scheduled for today ({today}).")
+                await ctx.send(f"❌ No question found for today ({today}).")
+                
+        except Exception as e:
+            await ctx.send(f"⚠️ **Error during force post:** `{str(e)}`")
 
     @qotd.command(name="repost")
     async def qotd_repost(self, ctx):
