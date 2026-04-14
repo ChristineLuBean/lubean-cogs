@@ -32,11 +32,28 @@ class QOTD(commands.Cog):
             )
             embed.add_field(name="Setup Channel", value="`!qotd channel #channel`", inline=False)
             embed.add_field(name="Schedule Question", value="`!qotd add YYYY-MM-DD <question>`", inline=False)
+            embed.add_field(name="Remove Question", value="`!qotd remove YYYY-MM-DD`", inline=False)
             embed.add_field(name="View Queue", value="`!qotd list`", inline=False)
             embed.add_field(name="Repost Current", value="`!qotd repost`", inline=False)
             embed.add_field(name="Force Post Today", value="`!qotd force`", inline=False)
-            embed.set_footer(text="Format dates as Year-Month-Day (e.g., 2026-04-13)")
+            embed.set_footer(text="Format dates as Year-Month-Day (e.g., 2026-04-14)")
             await ctx.send(embed=embed)
+
+    @qotd.command(name="remove")
+    @commands.admin_or_permissions(manage_guild=True)
+    async def qotd_remove(self, ctx, date: str):
+        """Remove all questions scheduled for a specific date."""
+        async with self.config.guild(ctx.guild).questions() as questions:
+            initial_count = len(questions)
+            # Filter out any questions that match the provided date
+            questions[:] = [q for q in questions if q["date"] != date]
+            final_count = len(questions)
+
+        removed = initial_count - final_count
+        if removed > 0:
+            await ctx.send(f"✅ Removed {removed} question(s) scheduled for {date}.")
+        else:
+            await ctx.send(f"❌ No questions were found for {date}.")
 
     @qotd.command(name="force")
     @commands.admin_or_permissions(manage_guild=True)
@@ -50,7 +67,7 @@ class QOTD(commands.Cog):
         
         channel = ctx.guild.get_channel(channel_id)
         if not channel:
-            return await ctx.send("❌ I can't find the QOTD channel. Is it deleted?")
+            return await ctx.send("❌ I can't find the QOTD channel.")
 
         async with self.config.guild(ctx.guild).questions() as questions:
             to_post = None
@@ -66,7 +83,6 @@ class QOTD(commands.Cog):
                 embed = discord.Embed(title="❓ Question of the Day", description=to_post, color=discord.Color.blue())
                 await channel.send(embed=embed)
                 
-                # Update records
                 await self.config.guild(ctx.guild).current_question.set(to_post)
                 await self.config.guild(ctx.guild).posted_today.set(today)
                 questions.pop(index_to_remove)
