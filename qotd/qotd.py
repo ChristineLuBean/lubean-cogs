@@ -9,7 +9,13 @@ class QOTD(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=8273641526)
-        default_guild = {"questions": [], "channel_id": None, "posted_today": None}
+        # Added 'current_question' to the defaults
+        default_guild = {
+            "questions": [], 
+            "channel_id": None, 
+            "posted_today": None,
+            "current_question": None
+        }
         self.config.register_guild(**default_guild)
         self.qotd_check.start()
 
@@ -19,7 +25,6 @@ class QOTD(commands.Cog):
     @commands.group()
     async def qotd(self, ctx):
         """Manage Question of the Day settings and queue."""
-        # If someone just types !qotd without a subcommand, show help
         if ctx.invoked_subcommand is None:
             embed = discord.Embed(
                 title="❓ QOTD Bot Guide",
@@ -29,8 +34,24 @@ class QOTD(commands.Cog):
             embed.add_field(name="Setup Channel", value="`!qotd channel #channel`", inline=False)
             embed.add_field(name="Schedule Question", value="`!qotd add YYYY-MM-DD <question>`", inline=False)
             embed.add_field(name="View Queue", value="`!qotd list`", inline=False)
+            embed.add_field(name="Repost Current", value="`!qotd repost`", inline=False)
             embed.set_footer(text="Format dates as Year-Month-Day (e.g., 2026-04-13)")
             await ctx.send(embed=embed)
+
+    @qotd.command(name="repost")
+    async def qotd_repost(self, ctx):
+        """Repost the current Question of the Day."""
+        current = await self.config.guild(ctx.guild).current_question()
+        
+        if not current:
+            return await ctx.send("There is no active Question of the Day to repost!")
+
+        embed = discord.Embed(
+            title="❓ Question of the Day (Repost)", 
+            description=current, 
+            color=discord.Color.blue()
+        )
+        await ctx.send(embed=embed)
 
     @qotd.command(name="channel")
     @commands.admin_or_permissions(manage_guild=True)
@@ -62,7 +83,6 @@ class QOTD(commands.Cog):
 
     @tasks.loop(minutes=30)
     async def qotd_check(self):
-        # ... (keep the same loop logic as before) ...
         today = datetime.date.today().isoformat()
         all_guilds = await self.config.all_guilds()
         for guild_id, data in all_guilds.items():
@@ -71,6 +91,7 @@ class QOTD(commands.Cog):
                 continue
             channel = guild.get_channel(data["channel_id"])
             if not channel: continue
+            
             to_post = None
             remaining = []
             for q in data["questions"]:
@@ -78,9 +99,12 @@ class QOTD(commands.Cog):
                     to_post = q["text"]
                 else:
                     remaining.append(q)
+            
             if to_post:
                 embed = discord.Embed(title="❓ Question of the Day", description=to_post, color=discord.Color.blue())
                 await channel.send(embed=embed)
+                # We save the question to 'current_question' before moving on
+                await self.config.guild(guild).current_question.set(to_post)
                 await self.config.guild(guild).questions.set(remaining)
                 await self.config.guild(guild).posted_today.set(today)
 
