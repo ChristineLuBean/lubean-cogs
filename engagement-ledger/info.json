@@ -1,0 +1,12 @@
+{
+    "author": ["Christine LuBean"],
+    "install_msg": "Thanks for installing the Engagement Ledger cog!",
+    "name": "engagement_ledger",
+    "short": "",
+    "description": "",
+    "tags": ["utility"],
+    "requirements": [],
+    "hidden": false,
+    "min_bot_version": "1.0.0",
+    "type": "COG"
+}
