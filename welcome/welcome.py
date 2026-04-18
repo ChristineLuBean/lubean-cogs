@@ -24,8 +24,18 @@ class Welcome(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        # Find the specific channel by ID
+        """Triggers automatically when a new member joins."""
         channel = self.bot.get_channel(self.welcome_channel_id)
-        
         if channel and channel.permissions_for(member.guild.me).send_messages:
             await channel.send(self.welcome_msg.format(user=member.mention))
+
+    @commands.command()
+    @commands.admin_or_permissions(manage_guild=True)
+    async def testwelcome(self, ctx):
+        """Test the Hubert welcome message manually."""
+        channel = self.bot.get_channel(self.welcome_channel_id)
+        if not channel:
+            return await ctx.send("I cannot find the channel. Check the ID in the code!")
+        
+        await ctx.send(f"Sending a test protocol to {channel.mention}...")
+        await channel.send(self.welcome_msg.format(user=ctx.author.mention))
