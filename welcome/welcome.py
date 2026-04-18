@@ -6,6 +6,8 @@ class Welcome(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        # PASTE YOUR CHANNEL ID HERE
+        self.welcome_channel_id = 1472163919517847552
         # Storing your chosen quote in a variable for cleanliness
         self.welcome_msg = (
             "Hmph. Another one, {user}?\n"
@@ -22,10 +24,8 @@ class Welcome(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        # Sends to the system channel (set in Discord Server Settings)
-        channel = member.guild.system_channel
+        # Find the specific channel by ID
+        channel = self.bot.get_channel(self.welcome_channel_id)
         
-        # Check if the channel exists and the bot has permission to speak
         if channel and channel.permissions_for(member.guild.me).send_messages:
-            # We use .format to swap {user} for the actual mention
             await channel.send(self.welcome_msg.format(user=member.mention))
