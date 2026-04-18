@@ -1,9 +1,10 @@
 {
     "author": ["Christine"],
-    "install_msg": "Hubert von Vestra is ready to serve.",
-    "name": "Hubert",
-    "short": "Hubert critical hit quotes.",
-    "description": "Returns a random critical hit quote from Hubert von Vestra.",
-    "tags": ["fire emblem", "quotes"],
-    "hidden": false
+    "install_msg": "Hubert von Vestra has taken his post at the gates of the Gilled Glitch. New arrivals will be monitored.",
+    "name": "ImperialWelcome",
+    "short": "A Hubert-themed welcome message for the Gilled Glitch.",
+    "description": "Automatically greets new members with a formal, sinister welcome from Hubert von Vestra, including links to rules, roles, and introductions.",
+    "tags": ["hubert", "fire emblem", "welcome", "gilled glitch"],
+    "hidden": false,
+    "min_bot_version": "3.4.0"
 }
