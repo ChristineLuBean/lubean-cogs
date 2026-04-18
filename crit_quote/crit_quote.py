@@ -22,4 +22,4 @@ class CritQuote(commands.Cog):
     async def crit(self, ctx):
         """Receive a random Hubert critical hit quote."""
         quote = random.choice(self.quotes)
-        await ctx.send(f"**Hubert:** {quote}")
+        await ctx.send(f"> {quote}")
