@@ -1,0 +1,9 @@
+{
+    "author": ["Christine"],
+    "install_msg": "Hubert von Vestra is ready to serve.",
+    "name": "Hubert",
+    "short": "Hubert critical hit quotes.",
+    "description": "Returns a random critical hit quote from Hubert von Vestra.",
+    "tags": ["fire emblem", "quotes"],
+    "hidden": false
+}
