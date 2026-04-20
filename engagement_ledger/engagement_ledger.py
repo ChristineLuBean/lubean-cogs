@@ -10,7 +10,7 @@ class EngagementLedger(commands.Cog):
         # Identifier is a unique int, using your bday + project year
         self.config = Config.get_conf(self, identifier=19892026, force_registration=True)
         self.config.register_user(points=0)
-        self.config.register_guild(log_channel=None)
+        self.config.register_guild(log_channel=None, watch_channel=None)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -27,6 +27,11 @@ class EngagementLedger(commands.Cog):
 
         guild = self.bot.get_guild(payload.guild_id)
         channel = guild.get_channel(payload.channel_id)
+
+        watch_id = await self.config.guild(guild).watch_channel()
+    
+        if watch_id and channel.id != watch_id:
+            return
         
         try:
             message = await channel.fetch_message(payload.message_id)
@@ -95,6 +100,11 @@ class EngagementLedger(commands.Cog):
         """Set the channel for point audit logs."""
         await self.config.guild(ctx.guild).log_channel.set(channel.id)
         await ctx.send(f"Audit logs set to {channel.mention}.")
+
+    async def watchchannel(self, ctx, channel: discord.TextChannel):
+        """Set the channel to watch for coin reactions."""
+        await self.config.guild(ctx.guild).watch_channel.set(channel.id)
+        await ctx.send(f"Now watching {channel.mention} for 🪙 reactions.")
 
 async def setup(bot):
     await bot.add_cog(EngagementLedger(bot))
