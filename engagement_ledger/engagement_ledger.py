@@ -95,3 +95,6 @@ class EngagementLedger(commands.Cog):
         """Set the channel for point audit logs."""
         await self.config.guild(ctx.guild).log_channel.set(channel.id)
         await ctx.send(f"Audit logs set to {channel.mention}.")
+
+async def setup(bot):
+    await bot.add_cog(EngagementLedger(bot))
