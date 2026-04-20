@@ -101,6 +101,7 @@ class EngagementLedger(commands.Cog):
         await self.config.guild(ctx.guild).log_channel.set(channel.id)
         await ctx.send(f"Audit logs set to {channel.mention}.")
 
+    @ledgerset.command()
     async def watchchannel(self, ctx, channel: discord.TextChannel):
         """Set the channel to watch for coin reactions."""
         await self.config.guild(ctx.guild).watch_channel.set(channel.id)
