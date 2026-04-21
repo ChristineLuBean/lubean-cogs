@@ -113,7 +113,7 @@ class EngagementLedger(commands.Cog):
             description += f"{i}. **{user_name}** — {data['points']} 🪙\n"
 
         embed = discord.Embed(
-            title="📂 [System Directory] Top Tacticians",
+            title="Top Tacticians",
             description=description,
             color=0x2ecc71
         )
