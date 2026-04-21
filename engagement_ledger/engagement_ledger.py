@@ -10,63 +10,56 @@ class EngagementLedger(commands.Cog):
         # Identifier is a unique int, using your bday + project year
         self.config = Config.get_conf(self, identifier=19892026, force_registration=True)
         self.config.register_user(points=0)
-        self.config.register_guild(log_channel=None)
+        self.config.register_guild(log_channel=None, watch_channel=None)
 
-    @commands.command()
-    async def award(self, ctx, amount: int = 1):
-        """
-        Award points to the author of the message you are replying to.
-        Usage: (Reply to a message) !award 1
-        """
-        # Security Gate: Only Christine (SheHaxalotl)
-        if ctx.author.id != 242836394488233995:
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        
+        # Trigger: :coin: emoji (🪙)
+        if str(payload.emoji) != "🪙":
             return
 
-        # Check if the command is a reply
-        if not ctx.message.reference:
-            return await ctx.send("⚠️ You must reply to a message to award points.")
+        # Security Gate: Only Christine (SheHaxalotl)
+        if payload.user_id != 242836394488233995:
+            return
 
+        if not payload.guild_id:
+            return
+
+        guild = self.bot.get_guild(payload.guild_id)
+        channel = guild.get_channel(payload.channel_id)
+
+        watch_id = await self.config.guild(guild).watch_channel()
+    
+        if watch_id and channel.id != watch_id:
+            return
+        
         try:
-            # Fetch the replied-to message
-            replied_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
-            target_user = replied_message.author
-
-            # Prevent awarding bots or self
-            if target_user.bot:
-                return await ctx.send("⚠️ Automated entities do not require currency.")
-            if target_user.id == ctx.author.id:
-                return await ctx.send("⚠️ You cannot award points to yourself.")
-
-            # Update points
-            async with self.config.user(target_user).all() as user_data:
-                user_data["points"] += amount
-                new_total = user_data["points"]
-
-            # Visual confirmation
-            await ctx.tick()
-
-            # Log to the audit channel
-            log_id = await self.config.guild(ctx.guild).log_channel()
-            if log_id:
-                log_chan = ctx.guild.get_channel(log_id)
-                if log_chan:
-                    embed = discord.Embed(
-                        title="[System Log] Currency Minted",
-                        description=(
-                            f"**Authorized by:** {ctx.author.mention}\n"
-                            f"**Recipient:** {target_user.mention}\n"
-                            f"**Amount:** {amount} 🪙\n"
-                            f"**New Balance:** {new_total} 🪙"
-                        ),
-                        color=0x2ecc71 # Terminal Green
-                    )
-                    embed.set_footer(text=f"User ID: {target_user.id}")
-                    await log_chan.send(embed=embed)
-
+            message = await channel.fetch_message(payload.message_id)
         except discord.NotFound:
-            await ctx.send("⚠️ I could not find the message you are replying to.")
-        except discord.Forbidden:
-            await ctx.send("⚠️ I do not have permission to fetch that message.")
+            return
+
+        # Prevent awarding bots or self
+        if message.author.bot == payload.user_id:
+            return
+
+        # Update points
+        async with self.config.user(message.author).all() as user_data:
+            user_data["points"] += 1
+            new_total = user_data["points"]
+
+        # Log to #mod-logs
+        log_id = await self.config.guild(guild).log_channel()
+        if log_id:
+            log_chan = guild.get_channel(log_id)
+            if log_chan:
+                embed = discord.Embed(
+                    title="[System Log] Currency Minted",
+                    description=f"**Target:** {message.author.mention}\n**New Balance:** {new_total} 🪙",
+                    color=0x2ecc71 # Terminal Green
+                )
+                embed.set_footer(text=f"Authorized by SheHaxalotl | ID: {message.author.id}")
+                await log_chan.send(embed=embed)
 
     @commands.command()
     async def wallet(self, ctx):
@@ -108,6 +101,12 @@ class EngagementLedger(commands.Cog):
         """Set the channel for point audit logs."""
         await self.config.guild(ctx.guild).log_channel.set(channel.id)
         await ctx.send(f"Audit logs set to {channel.mention}.")
+
+    @ledgerset.command()
+    async def watchchannel(self, ctx, channel: discord.TextChannel):
+        """Set the channel to watch for coin reactions."""
+        await self.config.guild(ctx.guild).watch_channel.set(channel.id)
+        await ctx.send(f"Now watching {channel.mention} for 🪙 reactions.")
 
 async def setup(bot):
     await bot.add_cog(EngagementLedger(bot))
