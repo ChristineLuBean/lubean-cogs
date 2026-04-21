@@ -1,0 +1,13 @@
+{
+    "author": ["Christine"],
+    "description": "A personal task list manager using Red's persistent Config storage.",
+    "disabled": false,
+    "end_user_data_statement": "This cog stores task descriptions provided by the user. Data is stored locally within the bot's Config and is not shared with any external services.",
+    "install_msg": "Thanks for installing the Tasklist cog! Use `[p]task add` to get started.",
+    "name": "Tasklist",
+    "required_cogs": {},
+    "requirements": [],
+    "short": "Keep track of your tasks directly in Discord.",
+    "tags": ["utility", "productivity", "todo"],
+    "type": "COG"
+}
