@@ -67,6 +67,35 @@ class EngagementLedger(commands.Cog):
         pts = await self.config.user(ctx.author).points()
         await ctx.send(f"🛡️ **[Wallet Status]** {ctx.author.name}, you have **{pts}** 🪙 in your ledger.")
 
+    @commands.command()
+    async def fine(self, ctx, target: discord.Member, amount: int):
+        """Deduct points from a user's wallet. Restricted to SheHaxalotl."""
+        # Security Gate: Only Christine (SheHaxalotl)
+        if ctx.author.id != 242836394488233995:
+            return await ctx.send("❌ **[Access Denied]** Unauthorized user signature detected.")
+
+        if amount <= 0:
+            return await ctx.send("Specify a positive integer to deduct.")
+
+        async with self.config.user(target).all() as user_data:
+            user_data["points"] -= amount
+            new_total = user_data["points"]
+
+        await ctx.send(f"📉 **[Penalty Applied]** {target.mention} has been fined **{amount}** 🪙.")
+
+        # Log the deduction
+        log_id = await self.config.guild(ctx.guild).log_channel()
+        if log_id:
+            log_chan = ctx.guild.get_channel(log_id)
+            if log_chan:
+                embed = discord.Embed(
+                    title="[System Log] Currency Revoked",
+                    description=f"**Target:** {target.mention}\n**Amount Removed:** {amount} 🪙\n**New Balance:** {new_total} 🪙",
+                    color=0xe74c3c # Blood Red
+                )
+                embed.set_footer(text=f"Revoked by SheHaxalotl | ID: {target.id}")
+                await log_chan.send(embed=embed)
+
     @commands.command(aliases=["topglitches"])
     async def leaderboard(self, ctx):
         """View the top contributors in the system."""
